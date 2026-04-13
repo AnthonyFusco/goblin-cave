@@ -1,26 +1,24 @@
-(ns engine.action
-  (:require [engine.room :as room]
-            [engine.entity :as entity]
-            [engine.core :as core]
-            [engine.utils :refer [mutation] :as utils]
-            [com.wsscode.pathom3.connect.indexes :as pci]
-            [com.wsscode.pathom3.connect.operation :as pco]
-            [com.wsscode.pathom3.interface.eql :as p.eql]
-            [com.wsscode.pathom3.interface.smart-map :as psm]
-            [com.wsscode.pathom3.plugin :as p.plugin]
-            [com.wsscode.pathom3.connect.built-in.plugins :as pbip]
-            [com.wsscode.pathom3.connect.built-in.resolvers :as pbir]))
+(ns engine.action)
 
-(def room2 {::id 1
-            ::desc {::text "a big hall"}
-            ::exits [{:exit/cardinal :exit.cardinal/north
-                      :exit/type :exit.type/door
-                      :exit/state :exit.state/closed
-                      ::next 0}
-                     {:exit/cardinal :exit.cardinal/south
-                      :exit/type :exit.type/door
-                      :exit/state :exit.state/open
-                      ::next 2}]})
+(defn make-show-effect
+  [args]
+  {::type :show
+   ::args args})
+
+(defn make-mutation-effect
+  "Creates a mutation action structure.
+   Args:
+     target: map with object id, typically {::object/id id}
+     args: map of arguments for the mutation
+   Returns: map with mutation type, target, and args"
+  [target args]
+  {::type :mutation
+   ::target target
+   ::args args})
+
+(defn make-effect-list
+  [effects]
+  {::effects (flatten (remove nil? (if (sequential? effects) effects [effects])))})
 
 (comment
   ;; open -> closed -> open

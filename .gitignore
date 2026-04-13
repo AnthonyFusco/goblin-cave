@@ -46,3 +46,4 @@ resources/public/js/cljs-runtime/
 /checkouts
 /classes
 /target
+.clj-kondo

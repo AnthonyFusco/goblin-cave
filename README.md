@@ -1,5 +1,7 @@
 # weiss/goblincave
 
+clj -M:storm:dev:test:cider-clj
+
 Run npx shadow-cljs watch app for dev (auto reloads frontend).
 M-x cider-jack-in-clj&cljs
 
