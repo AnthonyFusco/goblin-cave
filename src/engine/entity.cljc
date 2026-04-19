@@ -3,77 +3,75 @@
    [com.wsscode.pathom3.connect.operation :as pco]
    [engine.utils :as utils]))
 
-(def player
-  {::id 0
-   ::location 0
-   ::coords {::x 0 ::y 0 ::z 0}})
-
-(def other
-  {::id 1
-   ::location 1
-   ::coords {::x 1 ::y 1 ::z 1}})
-
-(defn make-entity [id coords location]
-  {::id id
-   ::coords coords
-   ::location location})
+(defn make-entity [id coords location state]
+  {:entity/id id
+   :entity/coords coords
+   :entity/location location
+   :entity/state state
+   :entity/rule-type :entity})
 
 (defn make-coords [x y z]
-  {::x x ::y y ::z z})
+  {:entity/x x :entity/y y :entity/z z})
+
+(def player
+  (make-entity 0 (make-coords 0 0 0) 0 {:name "Player"}))
+
+(def other
+  (make-entity 1 (make-coords 1 1 1) 1 {:name "Other"}))
 
 (pco/defresolver entity->id
-  [{:keys [:engine.entity/entity]}]
-  {:engine.entity/id (do (prn "entity->id")
-                         (:engine.entity/id entity))})
+  [{:keys [entity]}]
+  {:entity/id (do (prn "entity->id")
+                  (:entity/id entity))})
 
 (pco/defresolver entity->coords
-  [{:keys [:engine.entity/entity]}]
-  {:engine.entity/coords (do (prn "entity to coords ")
-                             (:engine.entity/coords entity))})
+  [{:keys [entity]}]
+  {:entity/coords (do (prn "entity to coords ")
+                      (:entity/coords entity))})
 
 (pco/defresolver id->location
-  [{::keys [entity id]}]
-  {::pco/input [::entity ::id]
-   ::pco/output [::location]}
-  {::location
+  [{:keys [entity entity/id]}]
+  {::pco/input [:entity :entity/id]
+   ::pco/output [:entity/location]}
+  {:entity/location
    (do (prn (str "id->location" " id:" id))
-       (::location entity))})
+       (:entity/location entity))})
 
 (pco/defresolver id->coords
-  [{:keys [:engine.core/entities]} {:keys [:engine.entity/id]}]
-  {::pco/input [:engine.core/entities [::id ::coords]]}
-  {::coords
+  [{:keys [world/entities]} {:keys [entity/id]}]
+  {::pco/input [:world/entities [:entity/id :entity/coords]]}
+  {:entity/coords
    (do (prn (str "id->coords" " id:" id))
-       (::coords (get entities id)))})
+       (:entity/coords (get entities id)))})
 
 (defn update-entity-location-fn [entity location]
-  (merge entity {::location location}))
+  (merge entity {:entity/location location}))
 
 (defn update-entity [world entity]
-  (assoc-in world [:engine.core/entities (:engine.entity/id entity)] entity))
+  (assoc-in world [:world/entities (:entity/id entity)] entity))
 
 (pco/defmutation update-entity-location
-  [{:keys [world]} {::keys [entity location]}]
-  {::pco/input [::entity ::location]}
+  [{:keys [world]} {:keys [entity entity/location]}]
+  {::pco/input [:entity :entity/location]}
   (let [updated-entity (update-entity-location-fn entity location)
         updated-world (update-entity world updated-entity)]
     (utils/computation-valid updated-world)))
 
 (pco/defresolver entity-resolver
-  [{:keys [:engine.entity/id :engine.core/entities]}]
-  {::entity (do (prn "entity resolver")
-                (first (filter #(= (::id %) id) entities)))})
+  [{:keys [entity/id world/entities]}]
+  {:entity (do (prn "entity resolver")
+               (first (filter #(= (:entity/id %) id) entities)))})
 
 (pco/defresolver entities-resolver
   [env {:keys [world]}]
-  {::pco/output [{:engine.core/entities [::entity]}]}
-  {:engine.core/entities
+  {::pco/output [{:world/entities [:entity]}]}
+  {:world/entities
    (do (prn "entities resolver")
-       (let [entities (vals (:engine.core/entities world))
+       (let [entities (vals (:world/entities world))
              location (pco/params env)]
          (if (seq location)
            (->> entities
-                (filter #(= (::location %) (::location location))))
+                (filter #(= (:entity/location %) (:entity/location location))))
            entities)))})
 
 (def resolvers [entity-resolver

@@ -4,11 +4,6 @@
             [engine.semantic :as semantic]))
 
 (defn extend-object-rules
-  "Merges base object rules with extra rules by unioning sets.
-   Args:
-     base: base rules map with :semantics, :intrinsic, :actions sets
-     extra: additional rules to merge
-   Returns: merged rules map"
   [base extra]
   (let [update-fn (fn [base key]
                     (update-in base [key] set/union (get extra key)))]
@@ -19,62 +14,79 @@
         (merge (dissoc extra :semantics :intrinsic :actions)))))
 
 (defn door-rules
-  "Creates door-specific rules by extending with exit semantics.
-   Args:
-     extra: additional door rules to merge
-   Returns: door rules map with exit semantics"
   [extra]
-  (extend-object-rules {:semantics #{::semantic/exit}} extra))
+  (extend-object-rules
+   {:semantics #{:semantic/exit}
+    :actions {:action/activate
+              (fn [{:keys [instance]}]
+                (let [{:keys [:entity/state :entity/id]} instance]
+                  (action/make-mutation-effect
+                   {:entity/id id}
+                   {:open? (not (:open? state))})))}}
+   extra))
 
 (defn lever-default-self-mutation
-  "Creates a self-mutation for lever state toggle.
-   Args:
-     id: object id of the lever
-     state: map with required :switched? key (boolean)
-   Returns: mutation action that toggles :switched? state"
   [id state]
   {:pre [(contains? state :switched?)]}
-  (action/make-mutation-effect {::id id}
+  (action/make-mutation-effect {:entity/id id}
                                (assoc {:switched? (not (:switched? state))}
                                       :meta "self-mutation => lever switched state")))
 
 (defn lever-activate-handler
-  "Handler for lever activation with state toggling.
-
-   Args:
-
-     - instance: map with :engine.action/state and ::object/id keys
-
-   Returns: map with combined activation and self-mutation effects"
-  [{:keys [:engine.action/state ::id]}]
+  [{:keys [:entity/state :entity/id]}]
   (let [self-effect (lever-default-self-mutation id state)
         show-effect (action/make-show-effect {:description "You heard a click somewhere"})]
     [self-effect show-effect]))
 
 (def object-rules
-  {::wooden-door
+  {:object/wooden-door
    (door-rules
     {:name "wooden door"
      :intrinsic #{:intrinsic/flammable}
-     :actions   {::action/open (fn [_] (action/make-show-effect {:describe "You push open the creaky wooden door"}))
-                 ::action/close (fn [_] (action/make-show-effect {:describe "You close the creaky wooden door"}))}})
+     :actions   {:action/open (fn [_] (action/make-show-effect {:describe "You push open the creaky wooden door"}))
+                 :action/close (fn [_] (action/make-show-effect {:describe "You close the creaky wooden door"}))}})
 
-   ::door
+   :object/door
    (door-rules {})
 
-   ::lever
-   {:semantics #{::semantic/activable}
-    :actions {::action/activate (fn [{:keys [instance]}]
+   :object/lever
+   {:semantics #{:semantic/activable}
+    :actions {:action/activate (fn [{:keys [instance]}]
                                   (let [{:keys [onActivate]} instance
                                         onActivate (or onActivate lever-activate-handler)]
                                     (onActivate instance)))}}
 
    "runtime generated object 1"
    {:name "boulgiboulga"
-    :semantics #{::semantic/food}
+    :semantics #{:semantic/food}
     :intrinsic #{:intrinsic/poisoned}}
 
-   ::iron-door
+   :object/iron-door
    (door-rules
     {:name "iron door"
-     :actions   {::action/open (fn [{:keys [name]}] (action/make-show-effect {:describe (str "You heave the " name " open")}))}})})
+     :actions   {:action/open (fn [{:keys [name]}] (action/make-show-effect {:describe (str "You heave the " name " open")}))}})})
+
+(def closed-door
+  {:entity/id "wooden-door"
+   :entity/rule-type :object/wooden-door
+   :entity/state {:exit-to 1
+                   :open? false}})
+
+(def switched-off-lever-of-healing
+  {:entity/id "lever-of-healing"
+   :entity/rule-type :object/lever
+   :entity/state {:name "Lever of Healing"
+                   :action/additional-effects [{:action/type :action/heal
+                                                 :action/args {:action/target :self}}]
+                   :action/target {:entity/id 1}
+                   :switched? false}})
+
+(def special-object
+  {:entity/id "special-object"
+   :entity/rule-type :object/special
+   :entity/state {:action/target "toto"
+                   :action/effects [{:action/type :action/open
+                                      :action/args {:action/target {:entity/id 1}}}]}})
+
+(def objects
+  [closed-door switched-off-lever-of-healing special-object])
