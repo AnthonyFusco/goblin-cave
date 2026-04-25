@@ -21,16 +21,14 @@
                 (let [{:keys [:entity/state :entity/id]} instance]
                   (action/make-mutation-effect
                    {:entity/id id}
-                   (merge instance
-                          {:open? (not (:open? state))}))))}}
+                   {:open? (not (:open? state))})))}}
    extra))
 
 (defn lever-default-self-mutation
   [id state]
   {:pre [(contains? state :switched?)]}
   (action/make-mutation-effect {:entity/id id}
-                               (assoc {:switched? (not (:switched? state))}
-                                      :meta "self-mutation => lever switched state")))
+                               {:switched? (not (:switched? state))}))
 
 (defn lever-activate-handler
   [{:keys [:entity/state :entity/id]}]
@@ -96,9 +94,17 @@
   {:entity/id "iron-door"
    :entity/rule-type :object/iron-door})
 
+(defn make-object
+  ([id rule-type state]
+   (make-object id rule-type state {}))
+  ([id rule-type state other]
+   (merge {:entity/id id
+           :entity/rule-type rule-type
+           :entity/state state}
+          other)))
+
 (def wooden-door
-  {:entity/id "wooden-door"
-   :entity/rule-type :object/wooden-door})
+  (make-object "wooden-door" :object/wooden-door {:open? false}))
 
 (def objects
   [closed-door switched-off-lever-of-healing special-object boulgiboulga iron-door wooden-door])

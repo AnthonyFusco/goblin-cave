@@ -1,6 +1,7 @@
 (ns engine.entity
   (:require
    [com.wsscode.pathom3.connect.operation :as pco]
+   [medley.core :refer [deep-merge]]
    [engine.utils :as utils]))
 
 (defn make-entity [id coords location state]
@@ -61,6 +62,13 @@
         updated-world (update-entity world updated-entity)]
     (utils/computation-valid updated-world)))
 
+(pco/defmutation mutate-entity
+  [{:keys [world]} {:keys [entity action/mutation]}]
+  {::pco/input [:entity :action/mutation]}
+  (let [updated-entity (deep-merge entity mutation)
+        updated-world (update-entity world updated-entity)]
+    (utils/computation-valid updated-world)))
+
 (pco/defresolver entity-resolver
   [{:keys [entity/id world/entities]}]
   {:entity (do (prn "entity resolver")
@@ -84,4 +92,5 @@
                 entities-resolver
                 id->location
                 update-entity-location
+                mutate-entity
                 id->coords])

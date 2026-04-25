@@ -5,7 +5,8 @@
    [engine.entity :as entity]
    [engine.object :as object]
    [engine.semantic :as semantic]
-   [engine.world :as world]))
+   [engine.world :as world]
+   [engine.action.command :as command]))
 
 (defn default-failed-action
   "Returns a default message for failed actions.
@@ -86,8 +87,18 @@
                 (action/make-action (:action/type effect) (:action/args effect))
                 (:action/target (:action/args effect))))
 
+(defn make-mutation-command-from-effect
+  [_env _rules effect]
+  {:pre [(not (nil? (:action/target effect)))
+         (not (nil? (:action/mutation effect)))]}
+  (let [target (:action/target effect)
+        mutation (:action/mutation effect)]
+    (action/make-commands
+     {:command (command/mutate-entity (:entity/id target) mutation)}))) ; TODO maybe not always entity, depends on target
+
 (def effect-handlers
-  {:action/activate apply-on-target-effect-handler})
+  {:action/activate apply-on-target-effect-handler
+   :action/mutation make-mutation-command-from-effect})
 
 (defn reify-effect
   [env rules effect]
@@ -97,14 +108,22 @@
       (handler env rules effect)
       (do
         (prn "No handler for " effect-type)
-        (action/make-effects effect)))))
+        (action/make-effects-and-commands {:effects effect})))))
 
-; maybe should loop until there is no differences between loops
-(defn reify-effects
+(defn- reify-effects-inner
   "Take an effect object and returns an effect object"
   [env rules effects]
   {:pre [(contains? effects :action/effects)]}
   (reduce
    (fn [coll effect] (merge-with into coll (reify-effect env rules effect)))
-   (action/make-effects)
+   (action/make-effects-and-commands {:commands (action/get-command-list effects)})
    (action/get-effect-list effects)))
+
+(defn reify-effects
+  [env rules effects]
+  {:pre [(contains? effects :action/effects)]}
+  (let [reified (reify-effects-inner env rules effects)]
+    (if (= (set (action/get-effect-list reified)) (set (action/get-effect-list effects)))
+      reified
+      (recur env rules reified)
+      )))

@@ -98,7 +98,7 @@
       (is (contains? result :action/effects))
       (let [effects (:action/effects result)]
         (is (some #(= (:action/type %) :show) effects))
-        (is (some #(= (:action/type %) :mutation) effects)))))
+        (is (some #(= (:action/type %) :action/mutation) effects)))))
 
   (testing "returns nothing happens for unsupported action"
     (let [env (core/with-entities mocks/env [object/wooden-door])
@@ -154,7 +154,7 @@
       (is (contains? result :action/effects))
       (let [effects (:action/effects result)]
         (is (some #(= (:action/type %) :show) effects))
-        (is (some #(= (:action/type %) :mutation) effects)))))
+        (is (some #(= (:action/type %) :action/mutation) effects)))))
 
   (testing "activates the switched-off healing lever from room data"
     (let [env (core/with-entities mocks/env [mocks/switched-off-lever-of-healing])

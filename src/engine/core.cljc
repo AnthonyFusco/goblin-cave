@@ -78,6 +78,12 @@
    env
    (command/teleport entity-id location)))
 
+(defn mutate-entity
+  [env entity-id mutation]
+  (process
+   env
+   (command/mutate-entity entity-id mutation)))
+
 (defn view!
   [{:keys [description]}]
   (prn description))

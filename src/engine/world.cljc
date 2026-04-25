@@ -14,6 +14,12 @@
   ([env ctx arg]
    (p.eql/process-one env ctx arg)))
 
+(defn query-entity
+  ([env entity-id]
+   (query-one env {:entity/id entity-id} :entity))
+  ([env entity-id arg]
+   (query-one env {:entity/id entity-id} arg)))
+
 (defn make-world [entities rooms]
   (let [entity-ids (map :entity/id entities)
         entities (utils/index-by :entity/id entities)

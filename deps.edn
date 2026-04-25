@@ -1,6 +1,7 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.12.4"}
         com.wsscode/pathom3 {:mvn/version "2025.01.16-alpha"}
+        dev.weavejester/medley {:mvn/version "1.10.0"}
         ;; Backend
         ring/ring-core {:mvn/version "1.15.3"}
         ring/ring-jetty-adapter {:mvn/version "1.15.3"}

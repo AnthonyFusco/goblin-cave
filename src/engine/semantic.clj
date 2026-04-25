@@ -55,8 +55,7 @@
                      (if (= state :open)
                        (action/make-show-effect {:describe "Already opened."})
                        [(action/make-show-effect {:describe (str "You open the " name)})
-                        (action/make-mutation-effect instance {:state :open
-                                                               :meta "door state mutation => open"})])))
+                        (action/make-mutation-effect instance {:state :open})])))
 
     :action/close (fn [{:keys [instance]}]
                     (let [{:keys [entity/state]} instance]

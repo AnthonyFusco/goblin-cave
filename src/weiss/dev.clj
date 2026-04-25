@@ -130,36 +130,54 @@
 ; TODO door noise side effect of door activation
 (rule/reify-effects core/env object/object-rules
                     (action/make-effects
-                     [{:action/type :mutation,
-                       :action/args {:switched? true, :meta "self-mutation => lever switched state"}}
+                     [{:action/type :action/mutation,
+                       :action/target {:entity/id "lever-of-healing"}
+                       :action/mutation {:switched? true}}
                       {:action/type :show, :action/args {:description "You heard a click somewhere"}}
                       {:action/type :action/activate,
-                       :action/args {:action/target {:entity/id 0}, :meta "default activate action"}}
+                       :action/args {:action/target {:entity/id 0}}}
                       {:action/type :action/activate,
-                       :action/args {:action/target {:entity/id "wooden-door"}, :meta "default activate action"}}
+                       :action/args {:action/target {:entity/id "wooden-door"}}}
                       {:action/type :action/heal, :action/args {:target :self}}]))
 
-(rule/reify-effects core/env object/object-rules
-                    (rule/apply-action
-                     core/env
-                     (action/make-action :action/activate)
-                     object/switched-off-lever-of-healing))
+(def effects
+  (rule/reify-effects core/env object/object-rules
+                      (rule/apply-action
+                       core/env
+                       (action/make-action :action/activate)
+                       object/switched-off-lever-of-healing)))
 
 (rule/reify-effects core/env object/object-rules
                     (action/make-effects
                      [{:action/type :action/activate,
-                       :action/args {:action/target {:entity/id "wooden-door"}, :meta "default activate action"}}]))
+                       :action/args {:action/target {:entity/id "wooden-door"}}}]))
 
-{:a.b/c 1}
-; Action
+(rule/reify-effects core/env object/object-rules
+                    (action/make-effects
+                     [{:action/type :action/mutation
+                       :action/target {:entity/id "wooden-door"}
+                       :action/mutation {:open? true}}]))
 
-(def advance-obj
-  {:action/type :action/advance
-   :action/args {:action/target 1}})
-;; (action/action-map advance-obj)
+(world/query-one core/env {:entity/id "wooden-door"} :entity)
+(world/query-one core/env :world/entities)
+(world/query-entity core/env "wooden-door")
 
-{:action/type :action/activate
- :action/args {:action/target 0}}
-{:action/type :mutation
- :action/args {:switched? true}}
+(def after (core/mutate-entity
+            core/env "wooden-door"
+            {:open? true}))
 
+
+(count (:action/commands effects))
+
+(core/process core/env (:command (first (:action/commands effects))))
+
+(reduce #(core/process %1 (:command %2))
+        core/env (:action/commands effects))
+
+(def after2 (reduce #(core/process %1 (:command %2))
+                    core/env (:action/commands effects)))
+(core/get-history after2)
+(world/query-entity core/env "wooden-door")
+(world/query-entity after2 "wooden-door")
+(world/query-entity core/env "lever-of-healing")
+(world/query-entity after2 "lever-of-healing")
