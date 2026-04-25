@@ -1,7 +1,6 @@
 (ns engine.object
   (:require [clojure.set :as set]
-            [engine.action :as action]
-            [engine.semantic :as semantic]))
+            [engine.action :as action]))
 
 (defn extend-object-rules
   [base extra]
@@ -22,7 +21,8 @@
                 (let [{:keys [:entity/state :entity/id]} instance]
                   (action/make-mutation-effect
                    {:entity/id id}
-                   {:open? (not (:open? state))})))}}
+                   (merge instance
+                          {:open? (not (:open? state))}))))}}
    extra))
 
 (defn lever-default-self-mutation
@@ -52,9 +52,9 @@
    :object/lever
    {:semantics #{:semantic/activable}
     :actions {:action/activate (fn [{:keys [instance]}]
-                                  (let [{:keys [onActivate]} instance
-                                        onActivate (or onActivate lever-activate-handler)]
-                                    (onActivate instance)))}}
+                                 (let [{:keys [onActivate]} instance
+                                       onActivate (or onActivate lever-activate-handler)]
+                                   (onActivate instance)))}}
 
    "runtime generated object 1"
    {:name "boulgiboulga"
@@ -70,23 +70,35 @@
   {:entity/id "wooden-door"
    :entity/rule-type :object/wooden-door
    :entity/state {:exit-to 1
-                   :open? false}})
+                  :open? false}})
 
 (def switched-off-lever-of-healing
   {:entity/id "lever-of-healing"
    :entity/rule-type :object/lever
    :entity/state {:name "Lever of Healing"
-                   :action/additional-effects [{:action/type :action/heal
-                                                 :action/args {:action/target :self}}]
-                   :action/target {:entity/id 1}
-                   :switched? false}})
+                  :action/additional-effects [{:action/type :action/heal
+                                               :action/args {:action/target :self}}]
+                  :action/target {:entity/id "wooden-door"}
+                  :switched? false}})
 
 (def special-object
   {:entity/id "special-object"
    :entity/rule-type :object/special
    :entity/state {:action/target "toto"
-                   :action/effects [{:action/type :action/open
-                                      :action/args {:action/target {:entity/id 1}}}]}})
+                  :action/effects [{:action/type :action/open
+                                    :action/args {:action/target {:entity/id 1}}}]}})
+
+(def boulgiboulga
+  {:entity/id "boulgiboulga"
+   :entity/rule-type "runtime generated object 1"})
+
+(def iron-door
+  {:entity/id "iron-door"
+   :entity/rule-type :object/iron-door})
+
+(def wooden-door
+  {:entity/id "wooden-door"
+   :entity/rule-type :object/wooden-door})
 
 (def objects
-  [closed-door switched-off-lever-of-healing special-object])
+  [closed-door switched-off-lever-of-healing special-object boulgiboulga iron-door wooden-door])

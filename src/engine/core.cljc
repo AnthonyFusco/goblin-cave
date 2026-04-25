@@ -14,7 +14,7 @@
    [engine.object :as object]
    [engine.world :as world]
    [engine.action.command :as command]
-   [engine.utils :refer [mutation] :as utils]))
+   [engine.utils :as utils]))
 
 (def initial-entities
   (flatten [entity/other entity/player object/objects]))
@@ -38,6 +38,10 @@
 
 (def env (-> indexes
              (with-world initial-world)))
+
+(defn with-entities
+  [env entities]
+  (update env :world world/with-entities entities))
 
 (defn with-history
   [env mutation]

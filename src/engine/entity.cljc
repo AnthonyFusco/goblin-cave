@@ -19,6 +19,10 @@
 (def other
   (make-entity 1 (make-coords 1 1 1) 1 {:name "Other"}))
 
+(defn get-name
+  [entity]
+  (get-in entity [:entity/state :name]))
+
 (pco/defresolver entity->id
   [{:keys [entity]}]
   {:entity/id (do (prn "entity->id")

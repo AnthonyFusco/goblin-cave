@@ -22,6 +22,14 @@
   [effects]
   (:action/effects effects))
 
+(defn make-action
+  ([type]
+   {:action/type type
+    :action/args {}})
+  ([type args]
+   {:action/type type
+    :action/args args}))
+
 (def action-rules
   {:action/default
    {:actions

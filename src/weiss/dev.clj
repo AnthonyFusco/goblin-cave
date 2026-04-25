@@ -59,85 +59,98 @@
 
 ; Rules
 
-(rule/compute-effects object/object-rules :action/eat {} "runtime generated object 1" {})
+(rule/apply-action core/env
+                   object/object-rules
+                   (action/make-action :action/eat)
+                   {:entity/id "boulgiboulga"})
 
-(rule/compute-effects object/object-rules :action/activate {}
-                      :object/lever {:object/id "toto"
-                                      :entity/state {:switched? true
-                                                      :action/target 0}})
+; (:world (with-entities env [{:entity/id "toot" :entity/name "toto"}]))
 
-(rule/compute-effects object/object-rules :action/activate {}
-                      :object/lever {:object/id "tata"
-                                      :entity/state {:switched? false
-                                                      :action/target "toto"
-                                                      :action/prevent-default? true}})
+(rule/apply-action (core/with-entities core/env
+                     [{:entity/id "toto"
+                       :entity/rule-type :object/lever
+                       :entity/state {:switched? true
+                                      :action/target 0}}])
+                   (action/make-action :action/activate)
+                   {:entity/id "toto"})
 
-(rule/compute-entity-effects (assoc object/object-rules :object/special {:semantics #{:semantics/activable}})
-                             :action/activate {} object/special-object)
+(rule/apply-action (core/with-entities core/env
+                     [{:entity/id "toto"
+                       :entity/rule-type :object/lever
+                       :entity/state {:switched? false
+                                      :action/target "toto"
+                                      :action/prevent-default? true}}])
+                   (action/make-action :action/activate)
+                   {:entity/id "toto"})
 
-(rule/compute-effects object/object-rules :action/open {} :object/wooden-door {})
+(rule/apply-action core/env
+                   (assoc object/object-rules :object/special {:semantics #{:semantic/activable}})
+                   (action/make-action :action/activate)
+                   {:entity/id "special-object"})
 
-(rule/compute-effects object/object-rules :action/open {} :object/iron-door {})
+(rule/apply-action core/env
+                   (action/make-action :action/open)
+                   {:entity/id "iron-door"})
 
-(rule/compute-effects object/object-rules :action/burn {:color "blue"} :object/wooden-door {})
+(rule/apply-action core/env
+                   (action/make-action :action/burn {:color "blue"})
+                   {:entity/id "wooden-door"})
 
-(rule/compute-effects object/object-rules :action/burn {} :object/wooden-door {})
+(rule/apply-action core/env
+                   (action/make-action :action/burn)
+                   {:entity/id "iron-door"})
 
-(rule/compute-effects object/object-rules :action/burn {} :object/iron-door {})
+(rule/apply-action core/env
+                   (action/make-action :action/activate)
+                   {:entity/id "wooden-door"})
 
-(rule/compute-effects object/object-rules :action/open {} :object/door {:entity/state {:name "Titouan la porte"}})
-(rule/compute-effects object/object-rules :action/open {} :object/door {})
-(rule/compute-effects object/object-rules :action/close {} :object/wooden-door {:state :close})
-(rule/compute-effects object/object-rules :action/close {} :object/door {:state :close})
-(rule/compute-effects object/object-rules
-                      :action/activate {}
-                      :object/door {:object/id "some door"
-                                     :entity/state {:open? true}})
+(rule/apply-action core/env
+                   (action/make-action :action/activate)
+                   {:entity/id "lever-of-healing"})
 
-(rule/compute-entity-effects object/object-rules :action/activate {} object/switched-off-lever-of-healing)
+; wrong
+(rule/apply-action core/env
+                   action/action-rules
+                   (action/make-action :action/advance)
+                   {:entity/id 0 :action/target 2})
 
-(rule/compute-effects object/object-rules
-                      :action/activate {}
-                      :object/door {:object/id "some door"
-                                     :entity/state {:open? true}})
-(rule/compute-effects action/action-rules
-                      :action/advance {}
-                      :action/default {:id "toto" :action/target 2})
-
-(world/query-one core/env {:entity/id 6} :entity)
+(world/query-one core/env {:entity/id 0} :entity)
 
 ; TODO door that overrides activate to activate something else
 
-(rule/execute-effect! core/env object/object-rules
-                 {:action/type :action/activate
-                  :action/args {:action/target {:entity/id "wooden-door"}}})
+(rule/reify-effect core/env object/object-rules
+                   {:action/type :action/activate
+                    :action/args {:action/target {:entity/id "wooden-door"}}})
 
-(rule/execute-effect! core/env object/object-rules
-                 {:action/type :action/activate
-                  :action/args {:action/target {:entity/id "wooden-door"
-                                                  :entity/rule-type :object/wooden-door
-                                                  :entity/state {:exit-to 1
-                                                                  :open? false}}}})
+(rule/reify-effect core/env object/object-rules
+                   {:action/type :action/activate
+                    :action/args {:action/target {:entity/id "lever-of-healing"}
+                                  :toto 1}})
 
-(rule/execute-effect! core/env object/object-rules
-                 {:action/type :action/activate
-                  :action/args {:action/target {:entity/id "lever-of-healing"}}})
+; TODO door noise side effect of door activation
+(rule/reify-effects core/env object/object-rules
+                    (action/make-effects
+                     [{:action/type :mutation,
+                       :action/args {:switched? true, :meta "self-mutation => lever switched state"}}
+                      {:action/type :show, :action/args {:description "You heard a click somewhere"}}
+                      {:action/type :action/activate,
+                       :action/args {:action/target {:entity/id 0}, :meta "default activate action"}}
+                      {:action/type :action/activate,
+                       :action/args {:action/target {:entity/id "wooden-door"}, :meta "default activate action"}}
+                      {:action/type :action/heal, :action/args {:target :self}}]))
 
-; todo door noise side effect of door activation
-(rule/execute-effects! core/env object/object-rules
-                 (action/make-effects
-                  [{:action/type :mutation,
-                    :action/args {:switched? true, :meta "self-mutation => lever switched state"}}
-                   {:action/type :show, :action/args {:description "You heard a click somewhere"}}
-                   {:action/type :action/activate,
-                    :action/args {:action/target {:entity/id 0}, :meta "default activate action"}}
-                   {:action/type :action/activate,
-                    :action/args {:action/target {:entity/id "wooden-door"}, :meta "default activate action"}}
-                   {:action/type :action/heal, :action/args {:target :self}}]))
+(rule/reify-effects core/env object/object-rules
+                    (rule/apply-action
+                     core/env
+                     (action/make-action :action/activate)
+                     object/switched-off-lever-of-healing))
 
-{
- :a.b/c 1
-}
+(rule/reify-effects core/env object/object-rules
+                    (action/make-effects
+                     [{:action/type :action/activate,
+                       :action/args {:action/target {:entity/id "wooden-door"}, :meta "default activate action"}}]))
+
+{:a.b/c 1}
 ; Action
 
 (def advance-obj

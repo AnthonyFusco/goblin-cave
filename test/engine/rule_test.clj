@@ -3,6 +3,8 @@
             [clojure.string :as str]
             [engine.rule :as rule]
             [engine.object :as object]
+            [engine.action :as action]
+            [engine.core :as core]
             [engine.mocks :as mocks]))
 
 (deftest default-failed-action-test
@@ -40,7 +42,7 @@
           rule {:name "lever"}
           instance {:entity/state {:name "custom lever"}}
           action-params {:param "value"}
-          result (rule/make-handler-args rule-key rule instance action-params)]
+          result (rule/make-handler-args mocks/env rule-key rule instance action-params)]
       (is (= rule-key (:rule-key result)))
       (is (= rule (:rule result)))
       (is (= "custom lever" (:name result)))
@@ -52,7 +54,7 @@
           rule {:name "lever"}
           instance {:entity/state {}}
           action-params {}
-          result (rule/make-handler-args rule-key rule instance action-params)]
+          result (rule/make-handler-args mocks/env rule-key rule instance action-params)]
       (is (= "lever" (:name result)))))
 
   (testing "uses rule-key name when no rule name"
@@ -60,7 +62,7 @@
           rule {}
           instance {}
           action-params {}
-          result (rule/make-handler-args rule-key rule instance action-params)]
+          result (rule/make-handler-args mocks/env rule-key rule instance action-params)]
       (is (= "lever" (:name result))))))
 
 (deftest choose-rule-test
@@ -80,69 +82,83 @@
 
 (deftest compute-effects-test
   (testing "computes effects for wooden door open action"
-    (let [result (rule/compute-effects object/object-rules :action/open {} :object/wooden-door {})]
+    (let [env (core/with-entities mocks/env [object/wooden-door])
+          result (rule/apply-action env object/object-rules (action/make-action :action/open) {:entity/id "wooden-door"})]
       (is (contains? result :action/effects))
       (is (some #(= (:describe %) "You push open the creaky wooden door")
                 (map :action/args (:action/effects result))))))
 
   (testing "computes effects for lever activation"
-    (let [instance {:entity/id    "test-lever"
-                    :entity/state {:switched? false
-                                    :action/target 0}}
-          result (rule/compute-effects object/object-rules :action/activate {} :object/lever instance)]
+    (let [test-lever {:entity/id "test-lever"
+                      :entity/rule-type :object/lever
+                      :entity/state {:switched? false
+                                      :action/target 0}}
+          env (core/with-entities mocks/env [test-lever])
+          result (rule/apply-action env object/object-rules (action/make-action :action/activate) {:entity/id "test-lever"})]
       (is (contains? result :action/effects))
       (let [effects (:action/effects result)]
         (is (some #(= (:action/type %) :show) effects))
         (is (some #(= (:action/type %) :mutation) effects)))))
 
   (testing "returns nothing happens for unsupported action"
-    (let [result (rule/compute-effects object/object-rules :action/unknown {} :object/wooden-door {})]
+    (let [env (core/with-entities mocks/env [object/wooden-door])
+          result (rule/apply-action env object/object-rules (action/make-action :action/unknown) {:entity/id "wooden-door"})]
       (is (contains? result :action/effects))
       (is (some #(= (:describe %) "Nothing happens when you unknown the wooden-door")
                 (map :action/args (:action/effects result))))))
 
   (testing "handles semantic rules for poisoned food eating"
-    (let [result (rule/compute-effects object/object-rules :action/eat {} "runtime generated object 1" {})]
+    (let [env (core/with-entities mocks/env [object/boulgiboulga])
+          result (rule/apply-action env object/object-rules (action/make-action :action/eat) {:entity/id "boulgiboulga"})]
       (is (contains? result :action/effects))
       (is (some #(str/includes? (:describe %) "Ouch! The boulgiboulga is poisoned")
                 (map :action/args (:action/effects result))))))
 
   (testing "handles semantic rules for non-poisoned food eating"
     (let [food-rule {:semantics #{:semantic/food}}
+          apple-obj {:entity/id "apple"
+                     :entity/rule-type ::apple
+                     :entity/state {}}
           rules (assoc object/object-rules ::apple food-rule)
-          result (rule/compute-effects rules :action/eat {} ::apple {})]
+          env (core/with-entities mocks/env [apple-obj])
+          result (rule/apply-action env rules (action/make-action :action/eat) {:entity/id "apple"})]
       (is (contains? result :action/effects))
       (is (some #(str/includes? (:describe %) "Nom! No more apple")
                 (map :action/args (:action/effects result))))))
 
   (testing "handles flammable objects with burn action and color parameter"
-    (let [result (rule/compute-effects object/object-rules :action/burn {:color "blue"} :object/wooden-door {})]
+    (let [env (core/with-entities mocks/env [object/wooden-door])
+          result (rule/apply-action env object/object-rules (action/make-action :action/burn {:color "blue"}) {:entity/id "wooden-door"})]
       (is (contains? result :action/effects))
       (is (some #(str/includes? (:describe %) "bursts into blue flames")
                 (map :action/args (:action/effects result)))))))
 
 (deftest perform-on-object-test
   (testing "performs action on object using object key"
-    (let [instance {:entity/rule-type :object/wooden-door
-                    :entity/id "test-door"}
-          result (rule/compute-entity-effects object/object-rules :action/open {} instance)]
+    (let [door {:entity/id "test-door"
+                :entity/rule-type :object/wooden-door
+                :entity/state {}}
+          env (core/with-entities mocks/env [door])
+          result (rule/apply-action env object/object-rules (action/make-action :action/open) {:entity/id "test-door"})]
       (is (contains? result :action/effects))
       (is (some #(= (:describe %) "You push open the creaky wooden door")
                 (map :action/args (:action/effects result))))))
 
   (testing "performs action on lever object"
-    (let [instance {:entity/rule-type :object/lever
-                    :entity/id "test-lever"
-                    :entity/state {:switched? false
-                                    :action/target 0}}
-          result (rule/compute-entity-effects object/object-rules :action/activate {} instance)]
+    (let [lever {:entity/id "test-lever"
+                 :entity/rule-type :object/lever
+                 :entity/state {:switched? false
+                                 :action/target 0}}
+          env (core/with-entities mocks/env [lever])
+          result (rule/apply-action env object/object-rules (action/make-action :action/activate) {:entity/id "test-lever"})]
       (is (contains? result :action/effects))
       (let [effects (:action/effects result)]
         (is (some #(= (:action/type %) :show) effects))
         (is (some #(= (:action/type %) :mutation) effects)))))
 
   (testing "activates the switched-off healing lever from room data"
-    (let [result (rule/compute-entity-effects object/object-rules :action/activate {} mocks/switched-off-lever-of-healing)]
+    (let [env (core/with-entities mocks/env [mocks/switched-off-lever-of-healing])
+          result (rule/apply-action env object/object-rules (action/make-action :action/activate) {:entity/id 0})]
       (is (contains? result :action/effects))
       (let [effects (:action/effects result)]
         (is (some #(= (:action/type %) :action/activate) effects))

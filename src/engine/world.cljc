@@ -24,6 +24,10 @@
      :world/initiatives initiatives
      :world/entities entities}))
 
+(defn with-entities
+  [world entities]
+  (update world :world/entities merge (utils/index-by :entity/id entities)))
+
 (pco/defresolver world-resolver
   [{:keys [world]} _]
   {::pco/output [:world]}
