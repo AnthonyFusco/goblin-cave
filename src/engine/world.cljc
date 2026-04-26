@@ -2,6 +2,7 @@
   (:require
    [com.wsscode.pathom3.connect.operation :as pco]
    [com.wsscode.pathom3.interface.eql :as p.eql]
+   [engine.entity :as entity]
    [engine.utils :as utils]))
 
 (defn query
@@ -20,15 +21,24 @@
   ([env entity-id arg]
    (query-one env {:entity/id entity-id} arg)))
 
+(defn get-log
+  [env]
+  (query-one env :world/log))
+
+(defn get-actors-from-entities
+  [entities]
+  (filter entity/actor? entities))
+
 (defn make-world [entities rooms]
-  (let [entity-ids (map :entity/id entities)
+  (let [actor-ids (map :entity/id (get-actors-from-entities entities))
         entities (utils/index-by :entity/id entities)
-        initiatives entity-ids]
+        initiatives actor-ids]
     {:world/player {:entity/id 0}
      :world/dungeon rooms
      :world/history nil
      :world/initiatives initiatives
-     :world/entities entities}))
+     :world/entities entities
+     :world/log []}))
 
 (defn with-entities
   [world entities]
@@ -43,17 +53,21 @@
 (pco/defresolver history-resolver
   [{:keys [world]} _]
   {:world/history (do (prn "get history")
-                 (:world/history world))})
+                      (:world/history world))})
+
+(pco/defresolver log-resolver
+  [{:keys [world]} _]
+  {:world/log (:world/log world)})
 
 (pco/defresolver initiatives-resolver
   [{:keys [world]} _]
   {:world/initiatives (do (prn "get initiatives")
-                     (:world/initiatives world))})
+                          (:world/initiatives world))})
 
 (pco/defresolver acting-resolver
   [{:keys [world]} _]
   {:world/acting (do (prn "get acting")
-                (first (:world/initiatives world)))})
+                     (first (:world/initiatives world)))})
 
 (defn update-initiatives
   [world initiatives]
@@ -85,6 +99,13 @@
    (let [description (describe-room room)]
      {:description description})})
 
+(pco/defmutation add-to-log
+  [{:keys [world]} args]
+  (let [log (:world/log world)
+        updated-log (conj log args)
+        updated-world (assoc world :world/log updated-log)]
+    (utils/computation-valid updated-world)))
+
 (pco/defresolver actions?
   [{:keys [room/room]}]
   {:world/actions
@@ -93,9 +114,11 @@
      )})
 
 (def resolvers [world-resolver
+                log-resolver
                 advance-initiative
                 history-resolver
                 initiatives-resolver
                 acting-resolver
                 compute-entity-view
+                add-to-log
                 actions?])

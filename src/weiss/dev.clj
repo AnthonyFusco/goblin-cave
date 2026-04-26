@@ -140,13 +140,6 @@
                        :action/args {:action/target {:entity/id "wooden-door"}}}
                       {:action/type :action/heal, :action/args {:target :self}}]))
 
-(def effects
-  (rule/reify-effects core/env object/object-rules
-                      (rule/apply-action
-                       core/env
-                       (action/make-action :action/activate)
-                       object/switched-off-lever-of-healing)))
-
 (rule/reify-effects core/env object/object-rules
                     (action/make-effects
                      [{:action/type :action/activate,
@@ -162,22 +155,53 @@
 (world/query-one core/env :world/entities)
 (world/query-entity core/env "wooden-door")
 
+(def effects
+  (rule/reify-effects core/env object/object-rules
+                      (rule/apply-action
+                       core/env
+                       (action/make-action :action/activate)
+                       object/switched-off-lever-of-healing)))
+
 (def after (core/mutate-entity
             core/env "wooden-door"
             {:open? true}))
 
-
 (count (:action/commands effects))
 
-(core/process core/env (:command (first (:action/commands effects))))
+(core/process core/env (first (:action/commands effects)))
 
-(reduce #(core/process %1 (:command %2))
+(reduce #(core/process %1 %2)
         core/env (:action/commands effects))
 
-(def after2 (reduce #(core/process %1 (:command %2))
-                    core/env (:action/commands effects)))
+(reduce core/process core/env (action/get-commands effects))
+
+(def after2 (core/execute-commands core/env effects))
 (core/get-history after2)
 (world/query-entity core/env "wooden-door")
 (world/query-entity after2 "wooden-door")
 (world/query-entity core/env "lever-of-healing")
 (world/query-entity after2 "lever-of-healing")
+
+
+; A turn
+(def my-action-effects
+  (rule/apply-action
+   core/env
+   (action/make-action :action/activate)
+   object/switched-off-lever-of-healing))
+
+
+(def my-reified-effects
+  (rule/reify-effects core/env object/object-rules
+                      my-action-effects))
+
+(def my-new-env
+  (core/execute-commands
+   core/env
+   my-reified-effects))
+
+(world/query-entity core/env "wooden-door")
+(world/query-entity my-new-env "wooden-door")
+(world/get-log core/env)
+(world/get-log my-new-env)
+; done

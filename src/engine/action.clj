@@ -22,23 +22,33 @@
   ([]
    {:action/commands '()})
   ([commands]
-   {:action/commands (flatten (remove nil? (if (sequential? commands) commands [commands])))}))
+   {:action/commands commands}))
 
 (defn make-effects-and-commands
   ([]
    {:action/effects '()
     :action/commands '()})
   ([{:keys [effects commands]}]
-   {:action/commands (flatten (remove nil? (if (sequential? commands) commands [commands])))
-    :action/effects (flatten (remove nil? (if (sequential? effects) effects [effects])))}))
+   {:action/effects (flatten (remove nil? (if (sequential? effects) effects [effects])))
+    :action/commands commands}))
 
-(defn get-effect-list
+(defn get-effects
   [effects]
   (or (:action/effects effects) []))
 
-(defn get-command-list
+(defn get-commands
   [commands]
   (or (:action/commands commands) []))
+
+(defn is-commands?
+  [o]
+  (contains? o :action/commands))
+
+(defn merge-effects
+  [effects1 effects2]
+  (make-effects-and-commands
+   {:effects (concat (get-effects effects1) (get-effects effects2))
+    :commands (into (get-commands effects1) (get-commands effects2))}))
 
 (defn make-action
   ([type]
@@ -54,4 +64,3 @@
     {:action/advance (fn [{:keys [instance]}]
                        (let [{:keys [id action/target]} instance]
                          (command/teleport id target)))}}})
-

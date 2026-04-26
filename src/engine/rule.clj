@@ -94,11 +94,17 @@
   (let [target (:action/target effect)
         mutation (:action/mutation effect)]
     (action/make-commands
-     {:command (command/mutate-entity (:entity/id target) mutation)}))) ; TODO maybe not always entity, depends on target
+     (list (command/mutate-entity (:entity/id target) mutation))))) ; TODO maybe not always entity, depends on target
+
+(defn make-show-command-from-effect
+  [_env _rules effect]
+  (action/make-commands
+   (list (command/make-show-command (:action/args effect)))))
 
 (def effect-handlers
   {:action/activate apply-on-target-effect-handler
-   :action/mutation make-mutation-command-from-effect})
+   :action/mutation make-mutation-command-from-effect
+   :show make-show-command-from-effect})
 
 (defn reify-effect
   [env rules effect]
@@ -115,15 +121,14 @@
   [env rules effects]
   {:pre [(contains? effects :action/effects)]}
   (reduce
-   (fn [coll effect] (merge-with into coll (reify-effect env rules effect)))
-   (action/make-effects-and-commands {:commands (action/get-command-list effects)})
-   (action/get-effect-list effects)))
+   (fn [coll effect] (action/merge-effects coll (reify-effect env rules effect)))
+   (action/make-effects-and-commands {:commands (action/get-commands effects)})
+   (action/get-effects effects)))
 
 (defn reify-effects
   [env rules effects]
   {:pre [(contains? effects :action/effects)]}
   (let [reified (reify-effects-inner env rules effects)]
-    (if (= (set (action/get-effect-list reified)) (set (action/get-effect-list effects)))
+    (if (= (set (action/get-effects reified)) (set (action/get-effects effects)))
       reified
-      (recur env rules reified)
-      )))
+      (recur env rules reified))))

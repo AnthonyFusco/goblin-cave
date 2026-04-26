@@ -84,6 +84,15 @@
    env
    (command/mutate-entity entity-id mutation)))
 
+(defn execute-command
+  [env command]
+  (process env command))
+
+(defn execute-commands
+  [env commands]
+  {:pre (action/is-commands? commands)}
+  (reduce execute-command env (action/get-commands commands)))
+
 (defn view!
   [{:keys [description]}]
   (prn description))

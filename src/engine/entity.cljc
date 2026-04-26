@@ -9,7 +9,12 @@
    :entity/coords coords
    :entity/location location
    :entity/state state
-   :entity/rule-type :entity})
+   :entity/rule-type :entity
+   :entity/properties #{:actor}})
+
+(defn actor?
+  [entity]
+  (contains? (:entity/properties entity) :actor))
 
 (defn make-coords [x y z]
   {:entity/x x :entity/y y :entity/z z})
