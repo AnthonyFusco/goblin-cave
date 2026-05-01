@@ -52,6 +52,12 @@
 
 (world/query-one core/env {:entity/id 0} :engine.view/view)
 
+(p.eql/process
+ core/env
+ '[(:world/entities {:entity/location 0})])
+
+(world/query-one core/env {:entity/location 0} :entities-in-location)
+
 (world/query-one core/env :world/acting)
 (world/query-one tmp3 :world/acting)
 (world/query-one core/env :world/initiatives)
@@ -205,3 +211,14 @@
 (world/get-log core/env)
 (world/get-log my-new-env)
 ; done
+
+(world/query-one core/env {:entity/location 0} :entities-in-location)
+
+(world/query-one core/env {:room/id 0} :room/room-description)
+
+(def player-map (psm/smart-map core/env {:entity/id 0}))
+(:room/room-description player-map)
+(:room/room player-map)
+(:entities-in-location player-map)
+(:entity/state player-map)
+(:entity player-map)

@@ -1,21 +1,19 @@
 (ns engine.mocks
   (:require [engine.entity :as entity]
             [engine.core :as core]
-            [engine.world :as world]
-            [engine.action :as action]
-            [engine.object :as object]))
+            [engine.world :as world]))
 
 (def entity-0 (entity/make-entity
                0
-               (entity/make-coords 0 0 0)
                0
-               {}))
+               {}
+               "0"))
 
 (def entity-1 (entity/make-entity
                1
-               (entity/make-coords 1 0 0)
                1
-               {}))
+               {}
+               "1"))
 
 (def room1 {::id 0
             ::desc {::text "a small room"}
